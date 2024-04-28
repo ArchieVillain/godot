@@ -48,6 +48,7 @@ protected:
 
 	GDVIRTUAL0RC(Vector<int>, _get_allowed_size_flags_horizontal)
 	GDVIRTUAL0RC(Vector<int>, _get_allowed_size_flags_vertical)
+	GDVIRTUAL2C(_fit_child_in_rect, Control*, Rect2)
 
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -58,6 +59,7 @@ public:
 		NOTIFICATION_SORT_CHILDREN = 51,
 	};
 
+	Rect2 get_fitted_rect(Control *p_child, const Rect2 &p_rect);
 	void fit_child_in_rect(Control *p_child, const Rect2 &p_rect);
 
 	virtual Vector<int> get_allowed_size_flags_horizontal() const;

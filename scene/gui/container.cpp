@@ -93,10 +93,7 @@ void Container::_sort_children() {
 	pending_sort = false;
 }
 
-void Container::fit_child_in_rect(Control *p_child, const Rect2 &p_rect) {
-	ERR_FAIL_NULL(p_child);
-	ERR_FAIL_COND(p_child->get_parent() != this);
-
+Rect2 Container::get_fitted_rect(Control* p_child, const Rect2& p_rect) {
 	bool rtl = is_layout_rtl();
 	Size2 minsize = p_child->get_combined_minimum_size();
 	Rect2 r = p_rect;
@@ -123,9 +120,20 @@ void Container::fit_child_in_rect(Control *p_child, const Rect2 &p_rect) {
 		}
 	}
 
-	p_child->set_rect(r);
-	p_child->set_rotation(0);
-	p_child->set_scale(Vector2(1, 1));
+	return r;
+}
+
+void Container::fit_child_in_rect(Control *p_child, const Rect2 &p_rect) {
+	ERR_FAIL_NULL(p_child);
+	ERR_FAIL_COND(p_child->get_parent() != this);
+
+	bool execute_default_behavior = true;
+	if (!GDVIRTUAL_CALL(_fit_child_in_rect, p_child, p_rect)) {
+		Rect2 r = get_fitted_rect(p_child, p_rect);
+		p_child->set_rect(r);
+		p_child->set_rotation(0);
+		p_child->set_scale(Vector2(1, 1));
+	}
 }
 
 void Container::queue_sort() {
@@ -202,9 +210,11 @@ PackedStringArray Container::get_configuration_warnings() const {
 void Container::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("queue_sort"), &Container::queue_sort);
 	ClassDB::bind_method(D_METHOD("fit_child_in_rect", "child", "rect"), &Container::fit_child_in_rect);
+	ClassDB::bind_method(D_METHOD("get_fitted_rect", "child", "rect"), &Container::get_fitted_rect);
 
 	GDVIRTUAL_BIND(_get_allowed_size_flags_horizontal);
 	GDVIRTUAL_BIND(_get_allowed_size_flags_vertical);
+	GDVIRTUAL_BIND(_fit_child_in_rect, "child", "rect");
 
 	BIND_CONSTANT(NOTIFICATION_PRE_SORT_CHILDREN);
 	BIND_CONSTANT(NOTIFICATION_SORT_CHILDREN);
