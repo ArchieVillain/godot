@@ -382,7 +382,7 @@ void ThemeDB::update_class_instance_items(Node *p_instance) {
 
 	// We also traverse the script class hierarchy (if present) to do the same with user-defined theme binds.
 	Ref<Script> current_script = p_instance->get_script();
-	while (current_script.is_valid() && current_script->is_valid()) {
+	while (current_script.is_valid() && current_script->is_valid() && p_instance->get_script_instance()) {
 		StringName script_class_name = current_script->get_global_name();
 
 		if (!script_class_name.is_empty()) {
