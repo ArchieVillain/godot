@@ -53,6 +53,9 @@
 
 #include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
+#include "scene/theme/theme_db.h"
+#include "scene/gui/control.h"
+#include "scene/main/window.h"
 
 #ifdef TOOLS_ENABLED
 #include "core/extension/gdextension_manager.h"
@@ -363,6 +366,28 @@ bool GDScript::has_method(const StringName &p_method) const {
 bool GDScript::has_static_method(const StringName &p_method) const {
 	return member_functions.has(p_method) && member_functions[p_method]->is_static();
 }
+
+bool GDScript::has_themed_property(const StringName& p_property) const {
+	return themed_property_types.has(p_property) && themed_property_items.has(p_property);
+}
+
+Theme::DataType GDScript::get_themed_property_type(const StringName &p_property) const {
+	if (themed_property_types.has(p_property)) {
+		return themed_property_types[p_property];
+	}
+
+	return Theme::DataType::DATA_TYPE_MAX;
+}
+
+StringName GDScript::get_themed_property_item_name(const StringName &p_property) const {
+	if (themed_property_items.has(p_property)) {
+		return themed_property_items[p_property];
+	}
+
+	return StringName();
+}
+
+
 
 int GDScript::get_script_method_argument_count(const StringName &p_method, bool *r_is_valid) const {
 	HashMap<StringName, GDScriptFunction *>::ConstIterator E = member_functions.find(p_method);
@@ -717,6 +742,51 @@ void GDScript::_static_default_init() {
 	}
 }
 
+void GDScript::_bind_themed_properties() {
+	if (get_global_name().is_empty()) {
+		return;
+	}
+
+	List<PropertyInfo> pinfo;
+	_get_script_property_list(&pinfo, false);
+
+	for (const PropertyInfo &E : pinfo) {
+		if (!has_themed_property(E.name)) {
+			continue;
+		}
+
+		String themed_property_name = E.name;
+		Theme::DataType themed_property_type = get_themed_property_type(E.name);
+		StringName themed_property_item_name = get_themed_property_item_name(E.name);
+
+		ThemeDB::get_singleton()->bind_class_item(themed_property_type, get_global_name(), themed_property_name, themed_property_item_name,
+				[
+					themed_property_type,
+					themed_property_name
+				](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
+					GDScriptInstance* script_instance = dynamic_cast<GDScriptInstance*>(p_instance->get_script_instance());
+					Control *c_cast = Object::cast_to<Control>(p_instance);
+					Window *w_cast = Object::cast_to<Window>(p_instance);
+					Variant value = Variant();
+					if (c_cast) {
+						value = c_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+					} else {
+						value = w_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+					}
+					// We set directly on the script instance since Controls and Windows translate themed property settings into override additions.
+					script_instance->set(themed_property_name, value);
+				});
+	}
+}
+
+void GDScript::_unbind_themed_properties() {
+	if (get_global_name().is_empty()) {
+		return;
+	}
+
+	ThemeDB::get_singleton()->unbind_class_items(get_global_name());
+}
+
 #ifdef TOOLS_ENABLED
 
 void GDScript::_save_old_static_data() {
@@ -811,6 +881,10 @@ Error GDScript::reload(bool p_keep_state) {
 	}
 #endif
 
+	if (is_valid()) {
+		_unbind_themed_properties();
+	}
+
 	valid = false;
 	GDScriptParser parser;
 	Error err;
@@ -885,6 +959,10 @@ Error GDScript::reload(bool p_keep_state) {
 		if (err) {
 			return err;
 		}
+	}
+
+	if (is_valid()) {
+		_bind_themed_properties();
 	}
 
 #ifdef TOOLS_ENABLED
