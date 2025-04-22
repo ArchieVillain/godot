@@ -98,6 +98,14 @@ GDScriptParser::GDScriptParser() {
 		register_annotation(MethodInfo("@static_unload"), AnnotationInfo::SCRIPT, &GDScriptParser::static_unload_annotation);
 		// Onready annotation.
 		register_annotation(MethodInfo("@onready"), AnnotationInfo::VARIABLE, &GDScriptParser::onready_annotation);
+		// Themed annotation.
+		register_annotation(MethodInfo("@themed", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_MAX>, varray(""), true);
+		register_annotation(MethodInfo("@themed_constant", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_CONSTANT>, varray(""), true);
+		register_annotation(MethodInfo("@themed_color", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_COLOR>, varray(""), true);
+		register_annotation(MethodInfo("@themed_icon", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_ICON>, varray(""), true);
+		register_annotation(MethodInfo("@themed_font_size", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_FONT_SIZE>, varray(""), true);
+		register_annotation(MethodInfo("@themed_font", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_FONT>, varray(""), true);
+		register_annotation(MethodInfo("@themed_stylebox", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Theme::DATA_TYPE_STYLEBOX>, varray(""), true);
 		// Export annotations.
 		register_annotation(MethodInfo("@export"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_NONE, Variant::NIL>);
 		register_annotation(MethodInfo("@export_enum", PropertyInfo(Variant::STRING, "names")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_ENUM, Variant::NIL>, varray(), true);
@@ -4362,6 +4370,93 @@ bool GDScriptParser::onready_annotation(AnnotationNode *p_annotation, Node *p_ta
 	}
 	variable->onready = true;
 	current_class->onready_used = true;
+	return true;
+}
+
+template <Theme::DataType t_type>
+bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class) {
+	ERR_FAIL_COND_V_MSG(p_target->type != Node::VARIABLE, false, vformat(R"(Annotation "%s" can only be applied to class variables.)", p_annotation->name));
+
+	bool inherits_control = ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Control"));
+	bool inherits_window = ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Window"));
+
+	if (current_class && !inherits_control && !inherits_window) {
+		push_error(vformat(R"(Annotation "%s" can only be used in classes that inherit "Control" and "Window".)", p_annotation->name), p_annotation);
+		return false;
+	}
+
+	VariableNode *variable = static_cast<VariableNode *>(p_target);
+	if (variable->is_static) {
+		push_error(vformat(R"(Annotation "%s" annotation cannot be applied to a static variable.)", p_annotation->name), p_annotation);
+		return false;
+	}
+
+	if (variable->themed) {
+		push_error(vformat(R"(Annotation "%s" annotation can only be used once per variable.)", p_annotation->name), p_annotation);
+		return false;
+	}
+
+	if (variable->initializer) {
+		push_error(vformat(R"(Annotation "%s" variable cannot be used with an initializer.)", p_annotation->name), p_annotation);
+		return false;
+	}
+
+	DataType datatype = variable->get_datatype();
+
+	if (p_annotation->name == "@themed") {
+		if (!datatype.is_hard_type()) {
+			push_error(vformat(R"(Annotation "%s" must be used together with an explicit type of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
+			return false;
+		}
+
+		switch (datatype.kind) {
+			case DataType::BUILTIN:
+				switch (datatype.builtin_type) {
+					case Variant::INT:
+						variable->themed_data_type = Theme::DATA_TYPE_CONSTANT;
+						break;
+					case Variant::COLOR:
+						variable->themed_data_type = Theme::DATA_TYPE_COLOR;
+						break;
+				}
+				break;
+			case DataType::NATIVE:
+				if (datatype.native_type == StringName("Texture2D")) {
+					variable->themed_data_type = Theme::DATA_TYPE_ICON;
+				} else if (datatype.native_type == StringName("Font")) {
+					variable->themed_data_type = Theme::DATA_TYPE_FONT;
+				} else if (datatype.native_type == StringName("StyleBox")) {
+					variable->themed_data_type = Theme::DATA_TYPE_STYLEBOX;
+				}
+				break;
+			case DataType::SCRIPT:
+				StringName base_type = datatype.script_type->get_instance_base_type();
+				if (base_type == StringName("Texture2D")) {
+					variable->themed_data_type = Theme::DATA_TYPE_ICON;
+				} else if (base_type == StringName("Font")) {
+					variable->themed_data_type = Theme::DATA_TYPE_FONT;
+				} else if (base_type == StringName("StyleBox")) {
+					variable->themed_data_type = Theme::DATA_TYPE_STYLEBOX;
+				}
+				break;
+		}
+
+		if (variable->themed_data_type == Theme::DATA_TYPE_MAX) {
+			push_error(vformat(R"(Variable annotated with "%s" must be one of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
+			return false;
+		}
+	}
+	else {
+		variable->themed_data_type = t_type;
+	}
+
+	variable->themed = true;
+	if (p_annotation->resolved_arguments.size() < 1 || String(p_annotation->resolved_arguments[0]) == "") {
+		variable->themed_item_name = variable->identifier->name;
+	} else {
+		variable->themed_item_name = p_annotation->resolved_arguments[0];
+	}
+
 	return true;
 }
 

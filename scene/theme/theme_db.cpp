@@ -32,6 +32,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/io/resource_loader.h"
+#include "core/object/script_language.h"
 #include "scene/gui/control.h"
 #include "scene/main/node.h"
 #include "scene/main/window.h"
@@ -355,6 +356,13 @@ void ThemeDB::bind_class_external_item(Theme::DataType p_data_type, const String
 	theme_item_binds_list[p_class_name].push_back(bind);
 }
 
+void ThemeDB::unbind_class_items(const StringName &p_class_name) {
+	if (theme_item_binds.has(p_class_name)) {
+		theme_item_binds[p_class_name].clear();
+		theme_item_binds_list[p_class_name].clear();
+	}
+}
+
 void ThemeDB::update_class_instance_items(Node *p_instance) {
 	ERR_FAIL_NULL(p_instance);
 
@@ -371,11 +379,42 @@ void ThemeDB::update_class_instance_items(Node *p_instance) {
 
 		class_name = ClassDB::get_parent_class_nocheck(class_name);
 	}
+
+	// We also traverse the script class hierarchy (if present) to do the same with user-defined theme binds.
+	Ref<Script> current_script = p_instance->get_script();
+	while (current_script.is_valid() && current_script->is_valid()) {
+		StringName script_class_name = current_script->get_global_name();
+
+		if (!script_class_name.is_empty()) {
+			HashMap<StringName, HashMap<StringName, ThemeItemBind>>::Iterator E = theme_item_binds.find(script_class_name);
+			if (E) {
+				for (const KeyValue<StringName, ThemeItemBind> &F : E->value) {
+					F.value.setter(p_instance, F.value.item_name, F.value.type_name);
+				}
+			}
+		}
+
+		current_script = current_script->get_base_script();
+	}
 }
 
 void ThemeDB::get_class_items(const StringName &p_class_name, List<ThemeItemBind> *r_list, bool p_include_inherited, Theme::DataType p_filter_type) {
 	List<StringName> class_hierarchy;
-	StringName class_name = p_class_name;
+
+	bool is_script = false;
+	if (ScriptServer::is_global_class(p_class_name)) {
+		is_script = true;
+
+		Ref<Script> current_script = ResourceLoader::load(ScriptServer::get_global_class_path(p_class_name));
+		while (current_script.is_valid() && current_script->is_valid()) {
+			if (!current_script->get_global_name().is_empty()) {
+				class_hierarchy.push_front(current_script->get_global_name());
+			}
+			current_script = current_script->get_base_script();
+		}
+	}
+
+	StringName class_name = is_script? ScriptServer::get_global_class_native_base(p_class_name) : p_class_name;
 	while (class_name != StringName()) {
 		class_hierarchy.push_front(class_name); // Put parent classes in front.
 		class_name = ClassDB::get_parent_class_nocheck(class_name);
@@ -404,6 +443,20 @@ void ThemeDB::get_class_items(const StringName &p_class_name, List<ThemeItemBind
 			}
 		}
 	}
+}
+
+// A node's base theme type is their class name if no script is attached.
+// Otherwise it's the nearest script global name in the script class hierarchy.
+StringName ThemeDB::get_node_base_theme_type(const Node* p_node) {
+	Ref<Script> current_script = p_node->get_script();
+	while (current_script.is_valid() && current_script->is_valid()) {
+		if (current_script->get_global_name().is_empty()) {
+			current_script = current_script->get_base_script();
+		} else {
+			return current_script->get_global_name();
+		}
+	}
+	return p_node->get_class_name();
 }
 
 void ThemeDB::_sort_theme_items() {

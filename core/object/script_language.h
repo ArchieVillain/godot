@@ -37,6 +37,7 @@
 #include "core/templates/pair.h"
 #include "core/templates/safe_refcount.h"
 #include "core/variant/typed_array.h"
+#include "scene/resources/theme.h"
 
 class ScriptLanguage;
 template <typename T>
@@ -168,6 +169,9 @@ public:
 	// TODO: In the next compat breakage rename to `*_script_*` to disambiguate from `Object::has_method()`.
 	virtual bool has_method(const StringName &p_method) const = 0;
 	virtual bool has_static_method(const StringName &p_method) const { return false; }
+	virtual bool has_themed_property(const StringName &p_property) const { return false; }
+	virtual Theme::DataType get_themed_property_type(const StringName &p_property) const { return Theme::DataType::DATA_TYPE_MAX; }
+	virtual StringName get_themed_property_item_name(const StringName &p_property) const { return StringName(); }
 
 	virtual int get_script_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const;
 

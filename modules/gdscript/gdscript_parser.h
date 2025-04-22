@@ -1254,6 +1254,9 @@ public:
 
 		bool exported = false;
 		bool onready = false;
+		bool themed = false;
+		Theme::DataType themed_data_type = Theme::DataType::DATA_TYPE_MAX;
+		StringName themed_item_name = StringName();
 		PropertyInfo export_info;
 		int assignments = 0;
 		bool is_static = false;
@@ -1519,6 +1522,8 @@ private:
 	bool icon_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool static_unload_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool onready_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
+	template <Theme::DataType t_type>
+	bool themed_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	template <PropertyHint t_hint, Variant::Type t_type>
 	bool export_annotations(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	bool export_storage_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);

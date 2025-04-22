@@ -104,6 +104,10 @@ class GDScript : public Script {
 	HashMap<StringName, MemberInfo> static_variables_indices;
 	Vector<Variant> static_variables; // Static variable values.
 
+	//@themed property information, including those in all base GDScript classes.
+	HashMap<StringName, Theme::DataType> themed_property_types; // Theme type bound to each property
+	HashMap<StringName, StringName> themed_property_items; // Theme item bound to each property
+
 	HashMap<StringName, Variant> constants;
 	HashMap<StringName, GDScriptFunction *> member_functions;
 	HashMap<StringName, Ref<GDScript>> subclasses;
@@ -174,6 +178,9 @@ private:
 
 	Error _static_init();
 	void _static_default_init(); // Initialize static variables with default values based on their types.
+
+	void _bind_themed_properties(); // Register `@themed` variables with ThemeDB.
+	void _unbind_themed_properties(); // Clear `@themed` variables (e.g. when reloading the script)
 
 	int subclass_count = 0;
 	RBSet<Object *> instances;
@@ -325,6 +332,9 @@ public:
 	virtual void get_script_method_list(List<MethodInfo> *p_list) const override;
 	virtual bool has_method(const StringName &p_method) const override;
 	virtual bool has_static_method(const StringName &p_method) const override;
+	bool has_themed_property(const StringName &p_method) const override;
+	Theme::DataType get_themed_property_type(const StringName &p_property) const override;
+	StringName get_themed_property_item_name(const StringName &p_property) const override;
 
 	virtual int get_script_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const override;
 
@@ -388,7 +398,7 @@ public:
 	virtual void get_property_list(List<PropertyInfo> *p_properties) const;
 	virtual Variant::Type get_property_type(const StringName &p_name, bool *r_is_valid = nullptr) const;
 	virtual void validate_property(PropertyInfo &p_property) const;
-
+	
 	virtual bool property_can_revert(const StringName &p_name) const;
 	virtual bool property_get_revert(const StringName &p_name, Variant &r_ret) const;
 
