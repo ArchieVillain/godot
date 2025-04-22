@@ -764,7 +764,7 @@ void GDScript::_bind_themed_properties() {
 					themed_property_type,
 					themed_property_name
 				](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
-					GDScriptInstance* script_instance = dynamic_cast<GDScriptInstance*>(p_instance->get_script_instance());
+					ScriptInstance* script_instance = p_instance->get_script_instance();
 					Control *c_cast = Object::cast_to<Control>(p_instance);
 					Window *w_cast = Object::cast_to<Window>(p_instance);
 					Variant value = Variant();
