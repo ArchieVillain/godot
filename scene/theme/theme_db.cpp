@@ -401,20 +401,7 @@ void ThemeDB::update_class_instance_items(Node *p_instance) {
 void ThemeDB::get_class_items(const StringName &p_class_name, List<ThemeItemBind> *r_list, bool p_include_inherited, Theme::DataType p_filter_type) {
 	List<StringName> class_hierarchy;
 
-	bool is_script = false;
-	if (ScriptServer::is_global_class(p_class_name)) {
-		is_script = true;
-
-		Ref<Script> current_script = ResourceLoader::load(ScriptServer::get_global_class_path(p_class_name));
-		while (current_script.is_valid() && current_script->is_valid()) {
-			if (!current_script->get_global_name().is_empty()) {
-				class_hierarchy.push_front(current_script->get_global_name());
-			}
-			current_script = current_script->get_base_script();
-		}
-	}
-
-	StringName class_name = is_script? ScriptServer::get_global_class_native_base(p_class_name) : p_class_name;
+	StringName class_name = p_class_name;
 	while (class_name != StringName()) {
 		class_hierarchy.push_front(class_name); // Put parent classes in front.
 		class_name = ClassDB::get_parent_class_nocheck(class_name);
@@ -445,18 +432,41 @@ void ThemeDB::get_class_items(const StringName &p_class_name, List<ThemeItemBind
 	}
 }
 
-// A node's base theme type is their class name if no script is attached.
-// Otherwise it's the nearest script global name in the script class hierarchy.
-StringName ThemeDB::get_node_base_theme_type(const Node* p_node) {
-	Ref<Script> current_script = p_node->get_script();
+void ThemeDB::get_script_items(const Ref<Script> p_script, List<ThemeItemBind> *r_list, bool p_include_inherited, Theme::DataType p_filter_type) {
+	List<StringName> class_hierarchy;
+	StringName script_class = p_script->get_global_name();
+
+	Ref<Script> current_script = p_script;
 	while (current_script.is_valid() && current_script->is_valid()) {
-		if (current_script->get_global_name().is_empty()) {
-			current_script = current_script->get_base_script();
-		} else {
-			return current_script->get_global_name();
+		if (!current_script->get_global_name().is_empty()) {
+			class_hierarchy.push_front(current_script->get_global_name());
+		}
+		current_script = current_script->get_base_script();
+	}
+
+	HashSet<StringName> inherited_props;
+	for (const StringName &theme_type : class_hierarchy) {
+		HashMap<StringName, List<ThemeItemBind>>::Iterator E = theme_item_binds_list.find(theme_type);
+		if (E) {
+			for (const ThemeItemBind &F : E->value) {
+				if (p_filter_type != Theme::DATA_TYPE_MAX && F.data_type != p_filter_type) {
+					continue;
+				}
+				if (inherited_props.has(F.item_name)) {
+					continue; // Skip inherited properties.
+				}
+				if (F.external || F.class_name != script_class) {
+					inherited_props.insert(F.item_name);
+
+					if (!p_include_inherited) {
+						continue; // Track properties defined in parent classes, and skip them.
+					}
+				}
+
+				r_list->push_back(F);
+			}
 		}
 	}
-	return p_node->get_class_name();
 }
 
 void ThemeDB::_sort_theme_items() {
