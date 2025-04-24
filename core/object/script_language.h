@@ -141,6 +141,12 @@ protected:
 	}
 
 public:
+	struct ThemedPropertyInfo {
+		StringName property_name = StringName();
+		Theme::DataType theme_item_type = Theme::DATA_TYPE_MAX;
+		StringName theme_item_name = StringName();
+	};
+
 	virtual void reload_from_file() override;
 
 	virtual bool can_instantiate() const = 0;
@@ -170,8 +176,7 @@ public:
 	virtual bool has_method(const StringName &p_method) const = 0;
 	virtual bool has_static_method(const StringName &p_method) const { return false; }
 	virtual bool has_themed_property(const StringName &p_property) const { return false; }
-	virtual Theme::DataType get_themed_property_type(const StringName &p_property) const { return Theme::DataType::DATA_TYPE_MAX; }
-	virtual StringName get_themed_property_item_name(const StringName &p_property) const { return StringName(); }
+	virtual ThemedPropertyInfo get_themed_property(const StringName &p_method) const { return ThemedPropertyInfo(); }
 
 	virtual int get_script_method_argument_count(const StringName &p_method, bool *r_is_valid = nullptr) const;
 

@@ -4377,15 +4377,25 @@ template <Theme::DataType t_type>
 bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class) {
 	ERR_FAIL_COND_V_MSG(p_target->type != Node::VARIABLE, false, vformat(R"(Annotation "%s" can only be applied to class variables.)", p_annotation->name));
 
-	bool inherits_control = ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Control"));
-	bool inherits_window = ClassDB::is_parent_class(current_class->get_datatype().native_type, SNAME("Window"));
+	bool inherits_control = ClassDB::is_parent_class(p_class->get_datatype().native_type, SNAME("Control"));
+	bool inherits_window = ClassDB::is_parent_class(p_class->get_datatype().native_type, SNAME("Window"));
 
-	if (current_class && !inherits_control && !inherits_window) {
+	if (!inherits_control && !inherits_window) {
 		push_error(vformat(R"(Annotation "%s" can only be used in classes that inherit "Control" and "Window".)", p_annotation->name), p_annotation);
 		return false;
 	}
 
+	if (!p_class->get_global_name()) {
+		push_error(vformat(R"(Annotation "%s" can only be used in globally registered scripts using class_name.)", p_annotation->name), p_annotation);
+		return false;
+	}
+
 	VariableNode *variable = static_cast<VariableNode *>(p_target);
+	if (p_class->get_global_name().is_empty()) {
+		push_error(vformat(R"(Annotation "%s" must be used in a script using class_name.)", p_annotation->name), p_annotation);
+		return false;
+	}
+
 	if (variable->is_static) {
 		push_error(vformat(R"(Annotation "%s" annotation cannot be applied to a static variable.)", p_annotation->name), p_annotation);
 		return false;
@@ -4402,55 +4412,57 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 	}
 
 	DataType datatype = variable->get_datatype();
+	Theme::DataType expected_type = t_type;
 
-	if (p_annotation->name == "@themed") {
-		if (!datatype.is_hard_type()) {
-			push_error(vformat(R"(Annotation "%s" must be used together with an explicit type of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
-			return false;
-		}
-
+	if (datatype.is_hard_type()) {
 		switch (datatype.kind) {
 			case DataType::BUILTIN:
 				switch (datatype.builtin_type) {
 					case Variant::INT:
-						variable->themed_data_type = Theme::DATA_TYPE_CONSTANT;
+						if (t_type != Theme::DATA_TYPE_FONT_SIZE) {
+							expected_type = Theme::DATA_TYPE_CONSTANT;
+						}
+						else {
+							expected_type = t_type;
+						}
 						break;
 					case Variant::COLOR:
-						variable->themed_data_type = Theme::DATA_TYPE_COLOR;
+						expected_type = Theme::DATA_TYPE_COLOR;
 						break;
 				}
 				break;
 			case DataType::NATIVE:
 				if (datatype.native_type == StringName("Texture2D")) {
-					variable->themed_data_type = Theme::DATA_TYPE_ICON;
+					expected_type = Theme::DATA_TYPE_ICON;
 				} else if (datatype.native_type == StringName("Font")) {
-					variable->themed_data_type = Theme::DATA_TYPE_FONT;
+					expected_type = Theme::DATA_TYPE_FONT;
 				} else if (datatype.native_type == StringName("StyleBox")) {
-					variable->themed_data_type = Theme::DATA_TYPE_STYLEBOX;
+					expected_type = Theme::DATA_TYPE_STYLEBOX;
 				}
 				break;
 			case DataType::SCRIPT:
 				StringName base_type = datatype.script_type->get_instance_base_type();
 				if (base_type == StringName("Texture2D")) {
-					variable->themed_data_type = Theme::DATA_TYPE_ICON;
+					expected_type = Theme::DATA_TYPE_ICON;
 				} else if (base_type == StringName("Font")) {
-					variable->themed_data_type = Theme::DATA_TYPE_FONT;
+					expected_type = Theme::DATA_TYPE_FONT;
 				} else if (base_type == StringName("StyleBox")) {
-					variable->themed_data_type = Theme::DATA_TYPE_STYLEBOX;
+					expected_type = Theme::DATA_TYPE_STYLEBOX;
 				}
 				break;
 		}
 
-		if (variable->themed_data_type == Theme::DATA_TYPE_MAX) {
-			push_error(vformat(R"(Variable annotated with "%s" must be one of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
+		if (t_type != Theme::DATA_TYPE_MAX && t_type != expected_type) {
+			push_error(vformat(R"(Annotation "%s" is not compatible with the annotated property's type.)", p_annotation->name), p_annotation);
 			return false;
 		}
-	}
-	else {
-		variable->themed_data_type = t_type;
+	} else if (t_type == Theme::DATA_TYPE_MAX) {
+		push_error(vformat(R"(Annotation "%s" must be used together with an explicit type of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
+		return false;
 	}
 
 	variable->themed = true;
+	variable->themed_data_type = expected_type;
 	if (p_annotation->resolved_arguments.size() < 1 || String(p_annotation->resolved_arguments[0]) == "") {
 		variable->themed_item_name = variable->identifier->name;
 	} else {

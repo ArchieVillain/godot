@@ -368,26 +368,16 @@ bool GDScript::has_static_method(const StringName &p_method) const {
 }
 
 bool GDScript::has_themed_property(const StringName& p_property) const {
-	return themed_property_types.has(p_property) && themed_property_items.has(p_property);
+	return themed_property_indices.has(p_property);
 }
 
-Theme::DataType GDScript::get_themed_property_type(const StringName &p_property) const {
-	if (themed_property_types.has(p_property)) {
-		return themed_property_types[p_property];
+Script::ThemedPropertyInfo GDScript::get_themed_property(const StringName& p_property) const {
+	if (themed_property_indices.has(p_property)) {
+		return themed_property_indices[p_property];
 	}
 
-	return Theme::DataType::DATA_TYPE_MAX;
+	return Script::ThemedPropertyInfo();
 }
-
-StringName GDScript::get_themed_property_item_name(const StringName &p_property) const {
-	if (themed_property_items.has(p_property)) {
-		return themed_property_items[p_property];
-	}
-
-	return StringName();
-}
-
-
 
 int GDScript::get_script_method_argument_count(const StringName &p_method, bool *r_is_valid) const {
 	HashMap<StringName, GDScriptFunction *>::ConstIterator E = member_functions.find(p_method);
@@ -747,35 +737,28 @@ void GDScript::_bind_themed_properties() {
 		return;
 	}
 
-	List<PropertyInfo> pinfo;
-	_get_script_property_list(&pinfo, false);
-
-	for (const PropertyInfo &E : pinfo) {
-		if (!has_themed_property(E.name)) {
-			continue;
-		}
-
-		String themed_property_name = E.name;
-		Theme::DataType themed_property_type = get_themed_property_type(E.name);
-		StringName themed_property_item_name = get_themed_property_item_name(E.name);
+	for (const KeyValue<StringName, Script::ThemedPropertyInfo> kv : themed_property_indices) {
+		StringName themed_property_name = kv.key;
+		StringName themed_property_item_name = kv.value.theme_item_name;
+		Theme::DataType themed_property_type = kv.value.theme_item_type;
 
 		ThemeDB::get_singleton()->bind_class_item(themed_property_type, get_global_name(), themed_property_name, themed_property_item_name,
-				[
-					themed_property_type,
-					themed_property_name
-				](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
-					ScriptInstance* script_instance = p_instance->get_script_instance();
-					Control *c_cast = Object::cast_to<Control>(p_instance);
-					Window *w_cast = Object::cast_to<Window>(p_instance);
-					Variant value = Variant();
-					if (c_cast) {
-						value = c_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
-					} else {
-						value = w_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
-					}
-					// We set directly on the script instance since Controls and Windows translate themed property settings into override additions.
-					script_instance->set(themed_property_name, value);
-				});
+			[
+				themed_property_type,
+				themed_property_name
+			](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
+				ScriptInstance *script_instance = p_instance->get_script_instance();
+				Control *c_cast = Object::cast_to<Control>(p_instance);
+				Window *w_cast = Object::cast_to<Window>(p_instance);
+				Variant value = Variant();
+				if (c_cast) {
+					value = c_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+				} else {
+					value = w_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+				}
+				// We set directly on the script instance since Controls and Windows translate themed property settings into override additions.
+				script_instance->set(themed_property_name, value);
+			});
 	}
 }
 

@@ -173,7 +173,7 @@ public:
 	void unbind_class_items(const StringName &p_class_name);
 	void update_class_instance_items(Node *p_instance);
 	void get_class_items(const StringName &p_class_name, List<ThemeItemBind> *r_list, bool p_include_inherited = false, Theme::DataType p_filter_type = Theme::DATA_TYPE_MAX);
-	static StringName get_node_base_theme_type(const Node *p_node);
+	void get_script_items(const Ref<Script> p_script, List<ThemeItemBind> *r_list, bool p_include_inherited = false, Theme::DataType p_filter_type = Theme::DATA_TYPE_MAX);
 
 	// Memory management, reference, and initialization.
 
