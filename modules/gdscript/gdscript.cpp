@@ -1659,6 +1659,8 @@ void GDScript::clear(ClearData *p_clear_data) {
 		static_initializer = nullptr;
 	}
 
+	_unbind_themed_properties();
+
 	_save_orphaned_subclasses(clear_data);
 
 #ifdef TOOLS_ENABLED
