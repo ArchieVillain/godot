@@ -805,13 +805,13 @@
 				[codeblock]
 				extends Container
 				class_name CustomContainer
-				
+
 				@themed offset: int
 
 				func _ready():
-					#These two lines are equivalent.
-					add_theme_constant_override("offset", 15)
-					offset = 15
+				    #These two lines are equivalent.
+				    add_theme_constant_override("offset", 15)
+				    offset = 15
 				[/codeblock]
 			</description>
 		</annotation>

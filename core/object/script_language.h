@@ -37,7 +37,6 @@
 #include "core/templates/pair.h"
 #include "core/templates/safe_refcount.h"
 #include "core/variant/typed_array.h"
-#include "scene/resources/theme.h"
 
 class ScriptLanguage;
 template <typename T>
@@ -142,8 +141,21 @@ protected:
 
 public:
 	struct ThemedPropertyInfo {
+		/*
+			NOTE: This is just a mirror of Theme::DataType
+		*/
+		enum DataType {
+			DATA_TYPE_COLOR,
+			DATA_TYPE_CONSTANT,
+			DATA_TYPE_FONT,
+			DATA_TYPE_FONT_SIZE,
+			DATA_TYPE_ICON,
+			DATA_TYPE_STYLEBOX,
+			DATA_TYPE_MAX
+		};
+
 		StringName property_name = StringName();
-		Theme::DataType theme_item_type = Theme::DATA_TYPE_MAX;
+		DataType theme_item_type = DATA_TYPE_MAX;
 		StringName theme_item_name = StringName();
 	};
 
