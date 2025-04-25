@@ -33,6 +33,7 @@
 #include "container.h"
 #include "core/config/project_settings.h"
 #include "core/input/input_map.h"
+#include "core/object/script_language.h"
 #include "core/os/os.h"
 #include "core/string/string_builder.h"
 #include "core/string/translation_server.h"
@@ -299,23 +300,25 @@ bool Control::_set(const StringName &p_name, const Variant &p_value) {
 	if (scr.is_valid() && scr->is_valid() && scr->has_themed_property(p_name)) {
 		Script::ThemedPropertyInfo t_info = scr->get_themed_property(p_name);
 		switch (t_info.theme_item_type) {
-			case Theme::DATA_TYPE_COLOR:
+			case Script::ThemedPropertyInfo::DATA_TYPE_COLOR:
 				add_theme_color_override(p_name, p_value);
 				break;
-			case Theme::DATA_TYPE_CONSTANT:
+			case Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT:
 				add_theme_constant_override(p_name, p_value);
 				break;
-			case Theme::DATA_TYPE_FONT:
+			case Script::ThemedPropertyInfo::DATA_TYPE_FONT:
 				add_theme_constant_override(p_name, p_value);
 				break;
-			case Theme::DATA_TYPE_FONT_SIZE:
+			case Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE:
 				add_theme_font_size_override(p_name, p_value);
 				break;
-			case Theme::DATA_TYPE_ICON:
+			case Script::ThemedPropertyInfo::DATA_TYPE_ICON:
 				add_theme_icon_override(p_name, p_value);
 				break;
-			case Theme::DATA_TYPE_STYLEBOX:
+			case Script::ThemedPropertyInfo::DATA_TYPE_STYLEBOX:
 				add_theme_style_override(p_name, p_value);
+				break;
+			default:
 				break;
 		}
 		return true;

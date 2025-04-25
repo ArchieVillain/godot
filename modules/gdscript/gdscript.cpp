@@ -51,11 +51,11 @@
 #include "core/core_constants.h"
 #include "core/io/file_access.h"
 
+#include "scene/gui/control.h"
+#include "scene/main/window.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
 #include "scene/theme/theme_db.h"
-#include "scene/gui/control.h"
-#include "scene/main/window.h"
 
 #ifdef TOOLS_ENABLED
 #include "core/extension/gdextension_manager.h"
@@ -367,11 +367,11 @@ bool GDScript::has_static_method(const StringName &p_method) const {
 	return member_functions.has(p_method) && member_functions[p_method]->is_static();
 }
 
-bool GDScript::has_themed_property(const StringName& p_property) const {
+bool GDScript::has_themed_property(const StringName &p_property) const {
 	return themed_property_indices.has(p_property);
 }
 
-Script::ThemedPropertyInfo GDScript::get_themed_property(const StringName& p_property) const {
+Script::ThemedPropertyInfo GDScript::get_themed_property(const StringName &p_property) const {
 	if (themed_property_indices.has(p_property)) {
 		return themed_property_indices[p_property];
 	}
@@ -737,28 +737,25 @@ void GDScript::_bind_themed_properties() {
 		return;
 	}
 
-	for (const KeyValue<StringName, Script::ThemedPropertyInfo> kv : themed_property_indices) {
+	for (const KeyValue<StringName, Script::ThemedPropertyInfo> &kv : themed_property_indices) {
 		StringName themed_property_name = kv.key;
 		StringName themed_property_item_name = kv.value.theme_item_name;
-		Theme::DataType themed_property_type = kv.value.theme_item_type;
+		Theme::DataType themed_property_type = static_cast<Theme::DataType>(kv.value.theme_item_type);
 
 		ThemeDB::get_singleton()->bind_class_item(themed_property_type, get_global_name(), themed_property_name, themed_property_item_name,
-			[
-				themed_property_type,
-				themed_property_name
-			](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
-				ScriptInstance *script_instance = p_instance->get_script_instance();
-				Control *c_cast = Object::cast_to<Control>(p_instance);
-				Window *w_cast = Object::cast_to<Window>(p_instance);
-				Variant value = Variant();
-				if (c_cast) {
-					value = c_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
-				} else {
-					value = w_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
-				}
-				// We set directly on the script instance since Controls and Windows translate themed property settings into override additions.
-				script_instance->set(themed_property_name, value);
-			});
+				[themed_property_type,
+						themed_property_name](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
+					Control *c_cast = Object::cast_to<Control>(p_instance);
+					Window *w_cast = Object::cast_to<Window>(p_instance);
+					Variant value = Variant();
+					if (c_cast) {
+						value = c_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+					} else {
+						value = w_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+					}
+					// We set directly on the script instance since Controls and Windows translate themed property settings into override additions.
+					p_instance->get_script_instance()->set(themed_property_name, value);
+				});
 	}
 }
 
