@@ -4413,22 +4413,28 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 	}
 
 	DataType datatype = variable->get_datatype();
-	Script::ThemedPropertyInfo::DataType expected_type = t_type;
+	Script::ThemedPropertyInfo::DataType inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_MAX;
 
-	if (datatype.is_hard_type()) {
+	if (!datatype.is_hard_type()) {
+		if (t_type == Script::ThemedPropertyInfo::DATA_TYPE_MAX) {
+			push_error(vformat(R"(Annotation "%s" must be used together with an explicit type of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
+			return false;
+		}
+		inferred_type = t_type;
+	} else {
 		switch (datatype.kind) {
 			case DataType::BUILTIN:
 				switch (datatype.builtin_type) {
 					case Variant::INT:
-						// Unless we're specifically requesting a font size, we expect ints to be constants.
+						// Unless we're specifically requesting a font size, we infer ints to be theme constants.
 						if (t_type != Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE) {
-							expected_type = Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT;
+							inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT;
 						} else {
-							expected_type = Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE;
+							inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE;
 						}
 						break;
 					case Variant::COLOR:
-						expected_type = Script::ThemedPropertyInfo::DATA_TYPE_COLOR;
+						inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_COLOR;
 						break;
 					default:
 						break;
@@ -4436,39 +4442,32 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 				break;
 			case DataType::NATIVE:
 				if (datatype.native_type == StringName("Texture2D")) {
-					expected_type = Script::ThemedPropertyInfo::DATA_TYPE_ICON;
+					inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_ICON;
 				} else if (datatype.native_type == StringName("Font")) {
-					expected_type = Script::ThemedPropertyInfo::DATA_TYPE_FONT;
+					inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_FONT;
 				} else if (datatype.native_type == StringName("StyleBox")) {
-					expected_type = Script::ThemedPropertyInfo::DATA_TYPE_STYLEBOX;
+					inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_STYLEBOX;
 				}
 				break;
-			case DataType::SCRIPT: {
-				StringName base_type = datatype.script_type->get_instance_base_type();
-				if (base_type == StringName("Texture2D")) {
-					expected_type = Script::ThemedPropertyInfo::DATA_TYPE_ICON;
-				} else if (base_type == StringName("Font")) {
-					expected_type = Script::ThemedPropertyInfo::DATA_TYPE_FONT;
-				} else if (base_type == StringName("StyleBox")) {
-					expected_type = Script::ThemedPropertyInfo::DATA_TYPE_STYLEBOX;
-				}
-				break;
-			}
 			default:
 				break;
 		}
 
-		if (t_type != Script::ThemedPropertyInfo::DATA_TYPE_MAX && t_type != expected_type) {
-			push_error(vformat(R"(Annotation "%s" is not compatible with the annotated property's type.)", p_annotation->name), p_annotation);
-			return false;
+		if (t_type == Script::ThemedPropertyInfo::DATA_TYPE_MAX) {
+			if (inferred_type == Script::ThemedPropertyInfo::DATA_TYPE_MAX) {
+				push_error(vformat(R"(Annotation "%s" must be used together with a type of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
+				return false;
+			}
+		} else {
+			if (t_type != inferred_type) {
+				push_error(vformat(R"(Annotation "%s" is not compatible with the annotated property's type.)", p_annotation->name), p_annotation);
+				return false;
+			}
 		}
-	} else if (t_type == Script::ThemedPropertyInfo::DATA_TYPE_MAX) {
-		push_error(vformat(R"(Annotation "%s" must be used together with an explicit type of: int, Color, Texture2D, Font, StyleBox.)", p_annotation->name), p_annotation);
-		return false;
 	}
 
 	variable->themed = true;
-	variable->themed_data_type = expected_type;
+	variable->themed_data_type = inferred_type;
 	if (p_annotation->resolved_arguments.size() < 1 || String(p_annotation->resolved_arguments[0]) == "") {
 		variable->themed_item_name = variable->identifier->name;
 	} else {
