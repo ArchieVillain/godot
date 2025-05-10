@@ -100,13 +100,13 @@ GDScriptParser::GDScriptParser() {
 		// Onready annotation.
 		register_annotation(MethodInfo("@onready"), AnnotationInfo::VARIABLE, &GDScriptParser::onready_annotation);
 		// Themed annotation.
-		register_annotation(MethodInfo("@themed", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_MAX>, varray(""), true);
-		register_annotation(MethodInfo("@themed_constant", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT>, varray(""), true);
-		register_annotation(MethodInfo("@themed_color", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_COLOR>, varray(""), true);
-		register_annotation(MethodInfo("@themed_icon", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_ICON>, varray(""), true);
-		register_annotation(MethodInfo("@themed_font_size", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE>, varray(""), true);
-		register_annotation(MethodInfo("@themed_font", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_FONT>, varray(""), true);
-		register_annotation(MethodInfo("@themed_stylebox", PropertyInfo(Variant::STRING, "theme_item_name")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_STYLEBOX>, varray(""), true);
+		register_annotation(MethodInfo("@themed", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_MAX>, varray("", ""), true);
+		register_annotation(MethodInfo("@themed_constant", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT>, varray("", ""), true);
+		register_annotation(MethodInfo("@themed_color", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_COLOR>, varray("", ""), true);
+		register_annotation(MethodInfo("@themed_icon", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_ICON>, varray("", ""), true);
+		register_annotation(MethodInfo("@themed_font_size", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE>, varray("", ""), true);
+		register_annotation(MethodInfo("@themed_font", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_FONT>, varray("", ""), true);
+		register_annotation(MethodInfo("@themed_stylebox", PropertyInfo(Variant::STRING, "theme_item"), PropertyInfo(Variant::STRING, "theme_type")), AnnotationInfo::VARIABLE, &GDScriptParser::themed_annotation<Script::ThemedPropertyInfo::DATA_TYPE_STYLEBOX>, varray("", ""), true);
 		// Export annotations.
 		register_annotation(MethodInfo("@export"), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_NONE, Variant::NIL>);
 		register_annotation(MethodInfo("@export_enum", PropertyInfo(Variant::STRING, "names")), AnnotationInfo::VARIABLE, &GDScriptParser::export_annotations<PROPERTY_HINT_ENUM, Variant::NIL>, varray(), true);
@@ -4305,16 +4305,12 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 		return false;
 	}
 
-	if (!p_class->get_global_name()) {
+	if (p_class->get_global_name().is_empty()) {
 		push_error(vformat(R"(Annotation "%s" can only be used in globally registered scripts using class_name.)", p_annotation->name), p_annotation);
 		return false;
 	}
 
 	VariableNode *variable = static_cast<VariableNode *>(p_target);
-	if (p_class->get_global_name().is_empty()) {
-		push_error(vformat(R"(Annotation "%s" must be used in a script using class_name.)", p_annotation->name), p_annotation);
-		return false;
-	}
 
 	if (variable->is_static) {
 		push_error(vformat(R"(Annotation "%s" annotation cannot be applied to a static variable.)", p_annotation->name), p_annotation);
@@ -4387,10 +4383,14 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 
 	variable->themed = true;
 	variable->themed_data_type = inferred_type;
-	if (p_annotation->resolved_arguments.size() < 1 || String(p_annotation->resolved_arguments[0]) == "") {
+	if (p_annotation->resolved_arguments.size() < 1 || p_annotation->resolved_arguments[0] == "") {
 		variable->themed_item_name = variable->identifier->name;
 	} else {
 		variable->themed_item_name = p_annotation->resolved_arguments[0];
+	}
+
+	if (p_annotation->resolved_arguments.size() > 1) {
+		variable->themed_theme_type = p_annotation->resolved_arguments[1];
 	}
 
 	return true;
