@@ -1257,6 +1257,7 @@ public:
 		bool themed = false;
 		Script::ThemedPropertyInfo::DataType themed_data_type = Script::ThemedPropertyInfo::DATA_TYPE_MAX;
 		StringName themed_item_name = StringName();
+		StringName themed_theme_type = StringName();
 		PropertyInfo export_info;
 		int assignments = 0;
 		bool is_static = false;

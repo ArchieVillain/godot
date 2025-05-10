@@ -157,6 +157,7 @@ public:
 		StringName property_name = StringName();
 		DataType theme_item_type = DATA_TYPE_MAX;
 		StringName theme_item_name = StringName();
+		StringName theme_type = StringName();
 	};
 
 	virtual void reload_from_file() override;
