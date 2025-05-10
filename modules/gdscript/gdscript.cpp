@@ -737,24 +737,28 @@ void GDScript::_bind_themed_properties() {
 		return;
 	}
 
-	for (const StringName prop_name : themed_properties) {
+	for (const StringName &prop_name : themed_properties) {
 		StringName prop_item = themed_property_indices[prop_name].theme_item_name;
+		StringName theme_type = themed_property_indices[prop_name].theme_type;
 		Theme::DataType prop_type = static_cast<Theme::DataType>(themed_property_indices[prop_name].theme_item_type);
+		ThemeDB::ThemeItemSetter setter = [prop_type, prop_name](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
+			Control *c_cast = Object::cast_to<Control>(p_instance);
+			Window *w_cast = Object::cast_to<Window>(p_instance);
+			Variant value = Variant();
+			if (c_cast) {
+				value = c_cast->get_theme_item(prop_type, p_item_name, p_type_name);
+			} else {
+				value = w_cast->get_theme_item(prop_type, p_item_name, p_type_name);
+			}
 
-		ThemeDB::get_singleton()->bind_class_item(prop_type, get_global_name(), prop_name, prop_item,
-				[prop_type,
-						prop_name](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
-					Control *c_cast = Object::cast_to<Control>(p_instance);
-					Window *w_cast = Object::cast_to<Window>(p_instance);
-					Variant value = Variant();
-					if (c_cast) {
-						value = c_cast->get_theme_item(prop_type, p_item_name, p_type_name);
-					} else {
-						value = w_cast->get_theme_item(prop_type, p_item_name, p_type_name);
-					}
+			p_instance->get_script_instance()->set(prop_name, value);
+		};
 
-					p_instance->get_script_instance()->set(prop_name, value);
-				});
+		if (theme_type.is_empty()) {
+			ThemeDB::get_singleton()->bind_class_item(prop_type, get_global_name(), prop_name, prop_item, setter);
+		} else {
+			ThemeDB::get_singleton()->bind_class_external_item(prop_type, get_global_name(), prop_name, prop_item, theme_type, setter);
+		}
 	}
 }
 
