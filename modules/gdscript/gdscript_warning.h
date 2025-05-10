@@ -95,6 +95,7 @@ public:
 		CONSTANT_USED_AS_FUNCTION, // Function not found, but there's a constant with the same name.
 		FUNCTION_USED_AS_PROPERTY, // Property not found, but there's a function with the same name.
 #endif
+		THEMED_ASSIGNMENT, // A `@themed` property is being assigned to outside of its setter.
 		WARNING_MAX,
 	};
 
@@ -152,6 +153,7 @@ public:
 		WARN, // CONSTANT_USED_AS_FUNCTION
 		WARN, // FUNCTION_USED_AS_PROPERTY
 #endif
+		WARN, // THEMED_ASSIGNMENT
 	};
 
 	static_assert((sizeof(default_warning_levels) / sizeof(default_warning_levels[0])) == WARNING_MAX, "Amount of default levels does not match the amount of warnings.");

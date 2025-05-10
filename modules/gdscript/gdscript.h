@@ -177,6 +177,7 @@ private:
 
 	// Theme features
 	HashMap<StringName, ThemedPropertyInfo> themed_property_indices; //@themed properties, including those in all base GDScript classes.
+	HashSet<StringName> themed_properties; //@themed properties declared in this class specifically.
 	void _bind_themed_properties(); // Register `@themed` variables with ThemeDB.
 	void _unbind_themed_properties(); // Clear `@themed` variables (e.g. when reloading the script)
 

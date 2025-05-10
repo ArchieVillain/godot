@@ -739,24 +739,23 @@ void GDScript::_bind_themed_properties() {
 		return;
 	}
 
-	for (const KeyValue<StringName, Script::ThemedPropertyInfo> &kv : themed_property_indices) {
-		StringName themed_property_name = kv.key;
-		StringName themed_property_item_name = kv.value.theme_item_name;
-		Theme::DataType themed_property_type = static_cast<Theme::DataType>(kv.value.theme_item_type);
+	for (const StringName prop_name : themed_properties) {
+		StringName prop_item = themed_property_indices[prop_name].theme_item_name;
+		Theme::DataType prop_type = static_cast<Theme::DataType>(themed_property_indices[prop_name].theme_item_type);
 
-		ThemeDB::get_singleton()->bind_class_item(themed_property_type, get_global_name(), themed_property_name, themed_property_item_name,
-				[themed_property_type,
-						themed_property_name](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
+		ThemeDB::get_singleton()->bind_class_item(prop_type, get_global_name(), prop_name, prop_item,
+				[prop_type,
+						prop_name](Node *p_instance, const StringName &p_item_name, const StringName &p_type_name) {
 					Control *c_cast = Object::cast_to<Control>(p_instance);
 					Window *w_cast = Object::cast_to<Window>(p_instance);
 					Variant value = Variant();
 					if (c_cast) {
-						value = c_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+						value = c_cast->get_theme_item(prop_type, p_item_name, p_type_name);
 					} else {
-						value = w_cast->get_theme_item(themed_property_type, p_item_name, p_type_name);
+						value = w_cast->get_theme_item(prop_type, p_item_name, p_type_name);
 					}
-					// We set directly on the script instance since Controls and Windows translate themed property settings into override additions.
-					p_instance->get_script_instance()->set(themed_property_name, value);
+
+					p_instance->get_script_instance()->set(prop_name, value);
 				});
 	}
 }
