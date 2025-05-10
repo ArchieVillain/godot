@@ -2699,6 +2699,7 @@ Error GDScriptCompiler::_prepare_compilation(GDScript *p_script, const GDScriptP
 	p_script->static_variables_indices.clear();
 	p_script->static_variables.clear();
 	p_script->themed_property_indices.clear();
+	p_script->themed_properties.clear();
 	p_script->_signals.clear();
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
@@ -2847,6 +2848,7 @@ Error GDScriptCompiler::_prepare_compilation(GDScript *p_script, const GDScriptP
 						t_info.property_name = name;
 						t_info.theme_item_name = variable->themed_item_name;
 						t_info.theme_item_type = variable->themed_data_type;
+						p_script->themed_properties.insert(name);
 						p_script->themed_property_indices.insert(name, t_info);
 					}
 				}
