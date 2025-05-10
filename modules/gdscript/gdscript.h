@@ -177,6 +177,7 @@ private:
 
 	// Theme features
 	HashMap<StringName, ThemedPropertyInfo> themed_property_indices; //@themed properties, including those in all base GDScript classes.
+	HashSet<StringName> themed_properties; //@themed properties declared in this class specifically.
 	void _bind_themed_properties(); // Register `@themed` variables with ThemeDB.
 	void _unbind_themed_properties(); // Clear `@themed` variables (e.g. when reloading the script)
 
@@ -396,7 +397,7 @@ public:
 	virtual void get_property_list(List<PropertyInfo> *p_properties) const;
 	virtual Variant::Type get_property_type(const StringName &p_name, bool *r_is_valid = nullptr) const;
 	virtual void validate_property(PropertyInfo &p_property) const;
-	
+
 	virtual bool property_can_revert(const StringName &p_name) const;
 	virtual bool property_get_revert(const StringName &p_name, Variant &r_ret) const;
 
