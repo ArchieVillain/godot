@@ -2843,6 +2843,30 @@ void GDScriptAnalyzer::reduce_assignment(GDScriptParser::AssignmentNode *p_assig
 	reduce_expression(p_assignment->assignee);
 
 #ifdef DEBUG_ENABLED
+	if (p_assignment->assignee->type == GDScriptParser::Node::IDENTIFIER) {
+		GDScriptParser::IdentifierNode *id = static_cast<GDScriptParser::IdentifierNode *>(p_assignment->assignee);
+		if (id->source == GDScriptParser::IdentifierNode::MEMBER_VARIABLE && id->variable_source && id->variable_source->themed) {
+			GDScriptParser::VariableNode *v_source = id->variable_source;
+			bool warn = true;
+
+			if (v_source->property == GDScriptParser::VariableNode::PROP_INLINE) {
+				if (v_source->setter && v_source->setter == id->suite->parent_function) {
+					warn = false;
+				}
+			} else if (v_source->property == GDScriptParser::VariableNode::PROP_SETGET) {
+				if (v_source->setter_pointer && v_source->setter_pointer->name == id->suite->parent_function->identifier->name) {
+					warn = false;
+				}
+			}
+
+			if (warn) {
+				parser->push_warning(p_assignment, GDScriptWarning::THEMED_ASSIGNMENT, id->name);
+			}
+		}
+	}
+#endif
+
+#ifdef DEBUG_ENABLED
 	{
 		bool is_subscript = false;
 		GDScriptParser::ExpressionNode *base = p_assignment->assignee;
