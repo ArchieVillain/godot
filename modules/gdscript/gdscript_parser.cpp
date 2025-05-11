@@ -4340,6 +4340,10 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 		switch (datatype.kind) {
 			case DataType::BUILTIN:
 				switch (datatype.builtin_type) {
+					case Variant::BOOL:
+					[[fallthrough]]
+					case Variant::FLOAT:
+						inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT;
 					case Variant::INT:
 						// Unless we're specifically requesting a font size, we infer ints to be theme constants.
 						if (t_type != Script::ThemedPropertyInfo::DATA_TYPE_FONT_SIZE) {
