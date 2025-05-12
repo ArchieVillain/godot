@@ -4341,7 +4341,7 @@ bool GDScriptParser::themed_annotation(AnnotationNode *p_annotation, Node *p_tar
 			case DataType::BUILTIN:
 				switch (datatype.builtin_type) {
 					case Variant::BOOL:
-					[[fallthrough]]
+						[[fallthrough]];
 					case Variant::FLOAT:
 						inferred_type = Script::ThemedPropertyInfo::DATA_TYPE_CONSTANT;
 					case Variant::INT:
