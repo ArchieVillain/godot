@@ -444,6 +444,12 @@ void ThemeDB::get_script_items(const Ref<Script> p_script, List<ThemeItemBind> *
 		current_script = current_script->get_base_script();
 	}
 
+	StringName class_name = p_script->get_instance_base_type();
+	while (class_name != StringName()) {
+		class_hierarchy.push_front(class_name);
+		class_name = ClassDB::get_parent_class_nocheck(class_name);
+	}
+
 	HashSet<StringName> inherited_props;
 	for (const StringName &theme_type : class_hierarchy) {
 		HashMap<StringName, List<ThemeItemBind>>::Iterator E = theme_item_binds_list.find(theme_type);
